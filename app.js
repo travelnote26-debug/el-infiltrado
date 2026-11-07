@@ -24,6 +24,7 @@
     help: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.2a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2-2.6 3.6"/><path d="M12 17.3h.01"/></svg>',
     trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3.5 6h17"/><path d="M8.5 6V4h7v2"/><path d="m6 6 1 14h10l1-14"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/><path d="M12 14.5v2.2"/></svg>',
+    install: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7"><path d="M2.5 12s3.6-6.2 9.5-6.2S21.5 12 21.5 12s-3.6 6.2-9.5 6.2S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>',
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>'
   };
@@ -284,6 +285,13 @@
     hold: null
   };
 
+  var deferredInstallPrompt = null;
+
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+  }
+
   function persistSetup() {
     save(STORAGE.setup, {
       count: setup.count,
@@ -423,6 +431,11 @@
 
         '<div class="mt-6 mb-4">' +
           '<button type="button" data-action="start-game" class="btn-primary">COMENZAR PARTIDA</button>' +
+          (!isStandalone()
+            ? '<button type="button" data-action="install-app" class="btn-ghost mt-2 flex items-center justify-center gap-2">' +
+                ICONS.install + ' Instalar como app' +
+              '</button>'
+            : '') +
           '<p class="text-center text-[11px] text-slate-500 mt-3">Un solo dispositivo · Pasa el teléfono</p>' +
         '</div>' +
       '</section>';
@@ -1149,6 +1162,9 @@
       case 'show-rules':
         openRules();
         break;
+      case 'install-app':
+        promptInstall();
+        break;
       case 'player-inc':
         if (setup.count < 12) {
           setup.count += 1;
@@ -1290,6 +1306,50 @@
               '<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300/80">Victoria</p>' +
               '<p class="mt-2">Los ciudadanos ganan al eliminar a todos los infiltrados. Los infiltrados ganan cuando igualan o superan el número de ciudadanos vivos.</p>' +
             '</div>' +
+          '</div>' +
+          '<button type="button" data-action="close-modal" class="btn-primary mt-5">ENTENDIDO</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function promptInstall() {
+    if (deferredInstallPrompt) {
+      var prompt = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      prompt.prompt();
+      prompt.userChoice.then(function (choice) {
+        if (choice && choice.outcome === 'accepted') toast('Instalando app...');
+      }).catch(function () {});
+      return;
+    }
+    openInstallHelp();
+  }
+
+  function openInstallHelp() {
+    document.body.classList.add('modal-open');
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isAndroid = /Android/i.test(ua);
+    var title = isIOS ? 'En iPhone / iPad (Safari)' : isAndroid ? 'En Android (Chrome)' : 'En tu navegador';
+    var steps = isIOS
+      ? 'Toca el botón Compartir de Safari y elige <strong>Añadir a pantalla de inicio</strong>. Después pulsa <strong>Añadir</strong>.'
+      : isAndroid
+        ? 'Abre el menú de tres puntos de Chrome y elige <strong>Instalar aplicación</strong> o <strong>Añadir a pantalla de inicio</strong>.'
+        : 'Busca el botón de instalar en la barra de direcciones o la opción <strong>Instalar aplicación</strong> en el menú del navegador.';
+    modalRoot.innerHTML =
+      '<div class="modal-overlay" data-action="close-modal">' +
+        '<div class="modal-card scroll-thin">' +
+          '<div class="flex items-start justify-between gap-3">' +
+            '<div><p class="label">Aplicación</p><h2 class="font-display text-xl text-white mt-1">Instalar en el móvil</h2></div>' +
+            '<button type="button" data-action="close-modal" class="icon-btn" aria-label="Cerrar">' + ICONS.close + '</button>' +
+          '</div>' +
+          '<p class="text-[13px] leading-relaxed text-slate-400 mt-3">Abre El Infiltrado a pantalla completa y sin la barra del navegador.</p>' +
+          '<div class="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] p-4">' +
+            '<p class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300/80">' + title + '</p>' +
+            '<p class="mt-2 text-[13px] leading-relaxed text-slate-300">' + steps + '</p>' +
+          '</div>' +
+          '<div class="mt-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4">' +
+            '<p class="text-[12px] leading-relaxed text-slate-400">Si la opción no aparece, recarga la página una vez y vuelve a intentarlo. En iPhone, la instalación debe hacerse desde Safari.</p>' +
           '</div>' +
           '<button type="button" data-action="close-modal" class="btn-primary mt-5">ENTENDIDO</button>' +
         '</div>' +
@@ -1480,6 +1540,23 @@
     Sound.click();
     addCustomPair(a ? a.value : '', b ? b.value : '');
   });
+
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+  });
+
+  window.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+    if (state.screen === 'setup') render();
+    toast('App instalada');
+  });
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () {});
+    });
+  }
 
   render();
 })();
