@@ -10,6 +10,7 @@
   var TIME_OPTIONS = [60, 90, 120, 180];
   var STORAGE = {
     custom: 'infiltrado.customPairs.v1',
+    history: 'infiltrado.history.v1',
     sound: 'infiltrado.sound.v1',
     setup: 'infiltrado.setup.v1'
   };
@@ -26,7 +27,10 @@
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/><path d="M12 14.5v2.2"/></svg>',
     install: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7"><path d="M2.5 12s3.6-6.2 9.5-6.2S21.5 12 21.5 12s-3.6 6.2-9.5 6.2S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>',
-    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>'
+    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
+    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>',
+    home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+    history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3.2 4.2v5.4h5.4"/><path d="M12 7.5V12l3 2"/></svg>'
   };
 
   function load(key, fallback) {
@@ -82,6 +86,25 @@
     return Math.floor(total / 60) + ':' + pad2(total % 60);
   }
 
+  function countLabel(count, singular, plural) {
+    return count + ' ' + (count === 1 ? singular : plural);
+  }
+
+  function formatHistoryDate(timestamp) {
+    var date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
+    try {
+      return new Intl.DateTimeFormat('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (err) {
+      return date.toLocaleString();
+    }
+  }
+
   function initials(name) {
     var clean = String(name || '?').trim();
     return escapeHtml(clean.slice(0, 2).toUpperCase() || '?');
@@ -118,7 +141,9 @@
       window.scrollTo(0, 0);
       lastScreen = state.screen;
     }
-    if (state.screen === 'setup') renderSetup();
+    if (state.screen === 'home') renderHome();
+    else if (state.screen === 'history') renderHistory();
+    else if (state.screen === 'setup') renderSetup();
     else if (state.screen === 'reveal') renderReveal();
     else if (state.screen === 'debate') renderDebate();
     else if (state.screen === 'vote-pass') renderVotePass();
@@ -244,6 +269,41 @@
     return pair && typeof pair.a === 'string' && typeof pair.b === 'string';
   });
 
+  var historyEntries = (function () {
+    var raw = load(STORAGE.history, []);
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(function (entry) {
+      return entry && typeof entry === 'object' &&
+        (entry.winner === 'citizens' || entry.winner === 'impostors') &&
+        Array.isArray(entry.players) && entry.players.length > 0 &&
+        Number.isFinite(entry.endedAt);
+    }).map(function (entry) {
+      var players = entry.players.map(function (player) {
+        return {
+          name: String(player && player.name ? player.name : '?'),
+          role: player && player.role === 'impostor' ? 'impostor' : 'civil',
+          word: player && player.word != null ? String(player.word) : null,
+          alive: !player || player.alive !== false
+        };
+      });
+      return {
+        id: String(entry.id || ('g' + entry.endedAt)),
+        endedAt: entry.endedAt,
+        startedAt: Number.isFinite(entry.startedAt) ? entry.startedAt : entry.endedAt,
+        winner: entry.winner,
+        mode: entry.mode === 'blind' ? 'blind' : 'undercover',
+        rounds: Math.max(1, parseInt(entry.rounds, 10) || 1),
+        debateTime: parseInt(entry.debateTime, 10) || 90,
+        civilWord: String(entry.civilWord || '—'),
+        impostorWord: entry.impostorWord == null ? null : String(entry.impostorWord),
+        survivors: players.filter(function (player) { return player.alive; }).length,
+        players: players
+      };
+    }).sort(function (a, b) {
+      return b.endedAt - a.endedAt;
+    }).slice(0, 50);
+  })();
+
   var savedSetup = load(STORAGE.setup, {}) || {};
   var defaultNames = [];
   for (var n = 1; n <= 12; n += 1) defaultNames.push('Jugador ' + n);
@@ -278,7 +338,7 @@
   setup.impostors = clamp(parseInt(savedSetup.impostors, 10) || 1, 1, maxImpostors(setup.count));
 
   var state = {
-    screen: 'setup',
+    screen: 'home',
     game: null,
     timerLoop: null,
     tallyTimer: null,
@@ -325,6 +385,140 @@
     }, 2300);
   }
 
+  function renderHome() {
+    var historyCount = historyEntries.length;
+    appEl.innerHTML =
+      '<section class="screen">' +
+        '<header class="flex items-start justify-between gap-3 pt-1">' +
+          '<div>' +
+            '<p class="label text-cyan-300/70">Pass &amp; Play</p>' +
+            '<h1 class="neon-title font-display text-[42px] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
+            '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
+          '</div>' +
+          '<div class="flex gap-2">' +
+            '<button type="button" data-action="show-rules" class="icon-btn" aria-label="Cómo jugar">' + ICONS.help + '</button>' +
+            soundButton() +
+          '</div>' +
+        '</header>' +
+
+        '<div class="grid grid-cols-3 gap-2 mt-6">' +
+          '<div class="card p-3 text-center">' +
+            '<p class="font-display text-[18px] font-bold text-cyan-200">3–12</p>' +
+            '<p class="mt-1 text-[9px] uppercase tracking-[0.16em] text-slate-500">Jugadores</p>' +
+          '</div>' +
+          '<div class="card p-3 text-center">' +
+            '<p class="font-display text-[18px] font-bold text-pink-200">1–3</p>' +
+            '<p class="mt-1 text-[9px] uppercase tracking-[0.16em] text-slate-500">Infiltrados</p>' +
+          '</div>' +
+          '<div class="card p-3 text-center">' +
+            '<p class="font-display text-[18px] font-bold text-violet-200">2</p>' +
+            '<p class="mt-1 text-[9px] uppercase tracking-[0.16em] text-slate-500">Modos</p>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="flex-1 flex flex-col justify-center py-7">' +
+          '<button type="button" data-action="new-game" class="btn-primary flex items-center justify-center gap-2">' +
+            ICONS.play + ' NUEVA PARTIDA' +
+          '</button>' +
+          '<button type="button" data-action="open-history" class="btn-ghost mt-3 flex items-center justify-between gap-3 px-5">' +
+            '<span class="flex items-center gap-2">' + ICONS.history + ' HISTORIAL DE PARTIDAS</span>' +
+            (historyCount
+              ? '<span class="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold text-cyan-200">' + historyCount + '</span>'
+              : '') +
+          '</button>' +
+          (!isStandalone()
+            ? '<button type="button" data-action="install-app" class="mx-auto mt-4 inline-flex items-center gap-2 text-[11px] font-semibold text-slate-500">' +
+                ICONS.install + ' Instalar como app' +
+              '</button>'
+            : '') +
+        '</div>' +
+
+        '<p class="text-center text-[10px] text-slate-600">Un solo dispositivo · Pasa el teléfono</p>' +
+      '</section>';
+  }
+
+  function renderHistory() {
+    var count = historyEntries.length;
+    var cards = historyEntries.map(historyCardMarkup).join('');
+    var emptyBlock =
+      '<div class="card mt-7 p-8 text-center">' +
+        '<div class="icon-btn mx-auto" style="width:56px;height:56px;border-radius:18px">' + ICONS.history + '</div>' +
+        '<p class="font-display text-lg font-bold text-white mt-4">Todavía no hay partidas</p>' +
+        '<p class="text-[12px] leading-relaxed text-slate-400 mt-2 max-w-[250px] mx-auto">Cuando terminéis una partida, se guardará aquí con el resultado y los roles.</p>' +
+        '<button type="button" data-action="new-game" class="btn-primary mt-6">NUEVA PARTIDA</button>' +
+      '</div>';
+
+    appEl.innerHTML =
+      '<section class="screen">' +
+        '<div class="flex items-center justify-between gap-3">' +
+          '<button type="button" data-action="go-home" class="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">' + ICONS.back + ' Inicio</button>' +
+          soundButton() +
+        '</div>' +
+        '<header class="mt-5">' +
+          '<p class="label text-cyan-300/70">Tus partidas</p>' +
+          '<h1 class="font-display text-[30px] font-bold text-white leading-none mt-2">Historial</h1>' +
+          '<p class="text-sm text-slate-400 mt-3">' +
+            (count
+              ? countLabel(count, 'partida guardada', 'partidas guardadas') + ' en este dispositivo.'
+              : 'Aquí aparecerán las partidas terminadas.') +
+          '</p>' +
+        '</header>' +
+        (count
+          ? '<div class="flex items-center justify-between gap-3 mt-5">' +
+              '<p class="label">Guardadas</p>' +
+              '<button type="button" data-action="clear-history" class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-300/90">' + ICONS.trash + ' Borrar todo</button>' +
+            '</div>' +
+            '<div class="grid gap-3 mt-3">' + cards + '</div>'
+          : emptyBlock) +
+      '</section>';
+  }
+
+  function historyCardMarkup(entry) {
+    var citizensWin = entry.winner === 'citizens';
+    var modeLabel = entry.mode === 'blind' ? 'Ciego' : 'Undercover';
+    var impostorWord = entry.impostorWord || 'Sin palabra';
+    var playerTags = entry.players.map(function (player) {
+      var isImpostor = player.role === 'impostor';
+      return '<span class="inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] ' +
+        (isImpostor
+          ? 'border-pink-400/25 bg-pink-400/[0.08] text-pink-100'
+          : 'border-cyan-400/20 bg-cyan-400/[0.05] text-cyan-100') +
+        '"><span class="h-1.5 w-1.5 rounded-full ' + (isImpostor ? 'bg-pink-400' : 'bg-cyan-400') + '"></span>' +
+        escapeHtml(player.name) + '</span>';
+    }).join('');
+
+    return '<article class="card history-card ' + (citizensWin ? '' : 'is-impostors') + ' p-4">' +
+      '<div class="flex items-start justify-between gap-3">' +
+        '<div class="min-w-0">' +
+          '<div class="flex flex-wrap items-center gap-2">' +
+            '<span class="mini-badge ' + (citizensWin ? 'civil' : 'impostor') + '">' + (citizensWin ? 'Ciudadanos' : 'Infiltrados') + '</span>' +
+            '<span class="text-[10px] uppercase tracking-[0.14em] text-slate-500">' + escapeHtml(formatHistoryDate(entry.endedAt)) + '</span>' +
+          '</div>' +
+          '<h2 class="font-display text-[18px] font-bold text-white mt-2">' +
+            (citizensWin ? 'Victoria ciudadana' : 'Victoria infiltrada') +
+          '</h2>' +
+          '<p class="text-[11px] text-slate-500 mt-1">' +
+            countLabel(entry.players.length, 'jugador', 'jugadores') + ' · ' +
+            countLabel(entry.rounds, 'ronda', 'rondas') + ' · ' +
+            countLabel(entry.survivors, 'superviviente', 'supervivientes') + ' · ' + modeLabel +
+          '</p>' +
+        '</div>' +
+        '<button type="button" data-action="delete-history" data-id="' + escapeHtml(entry.id) + '" class="history-delete" aria-label="Borrar esta partida del historial">' + ICONS.trash + '</button>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2 mt-3">' +
+        '<div class="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-2.5">' +
+          '<p class="text-[8px] uppercase tracking-[0.16em] text-cyan-300/70">Ciudadanos</p>' +
+          '<p class="font-display text-[12px] font-bold text-cyan-100 mt-1 break-words">' + escapeHtml(entry.civilWord) + '</p>' +
+        '</div>' +
+        '<div class="rounded-xl border border-pink-400/20 bg-pink-400/[0.06] p-2.5">' +
+          '<p class="text-[8px] uppercase tracking-[0.16em] text-pink-300/70">Infiltrados</p>' +
+          '<p class="font-display text-[12px] font-bold text-pink-100 mt-1 break-words">' + escapeHtml(impostorWord) + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="flex flex-wrap gap-1.5 mt-3">' + playerTags + '</div>' +
+    '</article>';
+  }
+
   function renderSetup() {
     var maxImp = maxImpostors(setup.count);
     setup.impostors = clamp(setup.impostors, 1, maxImp);
@@ -365,15 +559,18 @@
 
     appEl.innerHTML =
       '<section class="screen">' +
-        '<header class="flex items-start justify-between gap-3 pt-1">' +
-          '<div>' +
-            '<p class="label text-cyan-300/70">Pass &amp; Play</p>' +
-            '<h1 class="neon-title font-display text-[42px] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
-            '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
-          '</div>' +
+        '<div class="flex items-center justify-between gap-3">' +
+          '<button type="button" data-action="go-home" class="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">' + ICONS.back + ' Inicio</button>' +
           '<div class="flex gap-2">' +
             '<button type="button" data-action="show-rules" class="icon-btn" aria-label="Cómo jugar">' + ICONS.help + '</button>' +
             soundButton() +
+          '</div>' +
+        '</div>' +
+        '<header class="mt-5">' +
+          '<div>' +
+            '<p class="label text-cyan-300/70">Nueva partida</p>' +
+            '<h1 class="neon-title font-display text-[42px] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
+            '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
           '</div>' +
         '</header>' +
 
@@ -431,11 +628,6 @@
 
         '<div class="mt-6 mb-4">' +
           '<button type="button" data-action="start-game" class="btn-primary">COMENZAR PARTIDA</button>' +
-          (!isStandalone()
-            ? '<button type="button" data-action="install-app" class="btn-ghost mt-2 flex items-center justify-center gap-2">' +
-                ICONS.install + ' Instalar como app' +
-              '</button>'
-            : '') +
           '<p class="text-center text-[11px] text-slate-500 mt-3">Un solo dispositivo · Pasa el teléfono</p>' +
         '</div>' +
       '</section>';
@@ -757,7 +949,10 @@
       '<section class="screen">' +
         '<header class="flex items-center justify-between gap-3">' +
           '<p class="label text-slate-400">Fin de la partida</p>' +
-          soundButton() +
+          '<div class="flex gap-2">' +
+            '<button type="button" data-action="go-home" class="icon-btn" aria-label="Volver al inicio">' + ICONS.home + '</button>' +
+            soundButton() +
+          '</div>' +
         '</header>' +
         '<div class="result-banner ' + (citizensWin ? 'citizens' : 'impostors') + ' mt-4">' +
           confettiMarkup(game.winner) +
@@ -868,6 +1063,8 @@
       winner: null,
       lastEliminated: null,
       tie: null,
+      startedAt: Date.now(),
+      recorded: false,
       debateTime: setup.debateTime,
       timer: {
         base: setup.debateTime,
@@ -976,6 +1173,7 @@
       round: game.round
     };
     game.winner = computeWinner(game);
+    if (game.winner) recordFinishedGame(game);
     setScreen('elimination');
     Sound.eliminate(eliminated.role === 'impostor');
     vibrate([40, 40, 80]);
@@ -988,6 +1186,29 @@
     if (impostors === 0) return 'citizens';
     if (impostors >= citizens) return 'impostors';
     return null;
+  }
+
+  function recordFinishedGame(game) {
+    if (!game || game.recorded || !game.winner) return;
+    game.recorded = true;
+    var entry = {
+      id: 'g' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+      endedAt: Date.now(),
+      startedAt: game.startedAt || Date.now(),
+      winner: game.winner,
+      mode: game.mode,
+      rounds: game.round,
+      debateTime: game.debateTime,
+      civilWord: game.civilWord,
+      impostorWord: game.impostorWord,
+      survivors: game.players.filter(function (p) { return p.alive; }).length,
+      players: game.players.map(function (p) {
+        return { name: p.name, role: p.role, word: p.word, alive: p.alive };
+      })
+    };
+    historyEntries.unshift(entry);
+    historyEntries = historyEntries.slice(0, 50);
+    save(STORAGE.history, historyEntries);
   }
 
   function nextRound() {
@@ -1161,6 +1382,23 @@
         break;
       case 'show-rules':
         openRules();
+        break;
+      case 'open-history':
+        setScreen('history');
+        break;
+      case 'go-home':
+        clearTimeout(state.tallyTimer);
+        state.tallyTimer = null;
+        stopTimerLoop();
+        state.hold = null;
+        state.game = null;
+        setScreen('home');
+        break;
+      case 'delete-history':
+        openHistoryDeleteModal(el.dataset.id);
+        break;
+      case 'clear-history':
+        openClearHistoryModal();
         break;
       case 'install-app':
         promptInstall();
@@ -1356,6 +1594,64 @@
       '</div>';
   }
 
+  function openHistoryDeleteModal(id) {
+    var entry = historyEntries.find(function (item) { return item.id === id; });
+    if (!entry) return;
+    document.body.classList.add('modal-open');
+    modalRoot.innerHTML =
+      '<div class="modal-overlay" data-action="close-modal">' +
+        '<div class="modal-card">' +
+          '<div class="flex items-start justify-between gap-3">' +
+            '<div><p class="label text-rose-300/70">Historial</p><h2 class="font-display text-xl text-white mt-1">Borrar partida</h2></div>' +
+            '<button type="button" data-action="close-modal" class="icon-btn" aria-label="Cerrar">' + ICONS.close + '</button>' +
+          '</div>' +
+          '<p class="text-[13px] leading-relaxed text-slate-400 mt-3">Se eliminará esta partida del historial. Esta acción no se puede deshacer.</p>' +
+          '<div class="grid grid-cols-2 gap-2 mt-5">' +
+            '<button type="button" data-action="close-modal" class="btn-ghost">CANCELAR</button>' +
+            '<button type="button" data-action="confirm-delete-history" data-id="' + escapeHtml(entry.id) + '" class="btn-danger">BORRAR</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function openClearHistoryModal() {
+    if (!historyEntries.length) return;
+    var message = historyEntries.length === 1
+      ? 'Se eliminará la única partida guardada en este dispositivo. Esta acción no se puede deshacer.'
+      : 'Se eliminarán las ' + historyEntries.length + ' partidas guardadas en este dispositivo. Esta acción no se puede deshacer.';
+    document.body.classList.add('modal-open');
+    modalRoot.innerHTML =
+      '<div class="modal-overlay" data-action="close-modal">' +
+        '<div class="modal-card">' +
+          '<div class="flex items-start justify-between gap-3">' +
+            '<div><p class="label text-rose-300/70">Historial</p><h2 class="font-display text-xl text-white mt-1">Borrar todo</h2></div>' +
+            '<button type="button" data-action="close-modal" class="icon-btn" aria-label="Cerrar">' + ICONS.close + '</button>' +
+          '</div>' +
+          '<p class="text-[13px] leading-relaxed text-slate-400 mt-3">' + message + '</p>' +
+          '<div class="grid grid-cols-2 gap-2 mt-5">' +
+            '<button type="button" data-action="close-modal" class="btn-ghost">CANCELAR</button>' +
+            '<button type="button" data-action="confirm-clear-history" class="btn-danger">BORRAR TODO</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function removeHistoryEntry(id) {
+    historyEntries = historyEntries.filter(function (entry) { return entry.id !== id; });
+    save(STORAGE.history, historyEntries);
+    closeModal();
+    if (state.screen === 'history') render();
+    toast('Partida borrada');
+  }
+
+  function clearHistory() {
+    historyEntries = [];
+    save(STORAGE.history, historyEntries);
+    closeModal();
+    if (state.screen === 'history') render();
+    toast('Historial borrado');
+  }
+
   function customListMarkup() {
     if (!customPairs.length) {
       return '<p class="text-sm text-slate-500 text-center py-4">Aún no tienes parejas personalizadas.</p>';
@@ -1422,6 +1718,16 @@
         if (state.screen === 'setup' || state.screen === 'results') render();
         toast('Pareja eliminada');
       }
+      return;
+    }
+    if (action === 'confirm-delete-history') {
+      Sound.click();
+      removeHistoryEntry(el.dataset.id);
+      return;
+    }
+    if (action === 'confirm-clear-history') {
+      Sound.click();
+      clearHistory();
     }
   }
 

@@ -352,6 +352,24 @@ button {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.btn-danger {
+  width: 100%;
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  border-radius: 16px;
+  padding: 14px 18px;
+  background: rgba(251, 113, 133, 0.12);
+  color: #fecdd3;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.btn-danger:active {
+  transform: scale(0.98);
+  background: rgba(251, 113, 133, 0.22);
+}
+
 .progress-track {
   height: 6px;
   border-radius: 999px;
@@ -1010,6 +1028,44 @@ button {
   border: 1px solid rgba(251, 113, 133, 0.25);
   background: rgba(251, 113, 133, 0.08);
   color: #fda4af;
+}
+
+.history-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.history-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--cyan), var(--violet));
+  opacity: 0.85;
+}
+
+.history-card.is-impostors::before {
+  background: linear-gradient(180deg, var(--pink), var(--violet));
+}
+
+.history-delete {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  background: rgba(251, 113, 133, 0.07);
+  color: #fda4af;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.history-delete:active {
+  transform: scale(0.92);
+  background: rgba(251, 113, 133, 0.16);
 }
 
 #toast {
