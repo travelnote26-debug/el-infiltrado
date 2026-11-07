@@ -144,6 +144,7 @@
     if (state.screen === 'home') renderHome();
     else if (state.screen === 'history') renderHistory();
     else if (state.screen === 'setup') renderSetup();
+    else if (state.screen === 'reveal-pass') renderRevealPass();
     else if (state.screen === 'reveal') renderReveal();
     else if (state.screen === 'debate') renderDebate();
     else if (state.screen === 'vote-pass') renderVotePass();
@@ -633,6 +634,46 @@
       '</section>';
   }
 
+  function renderRevealPass() {
+    var game = state.game;
+    if (!game) return;
+    var player = game.players[game.revealIndex];
+    if (!player) return;
+    var progress = (game.revealIndex / game.players.length) * 100;
+
+    appEl.innerHTML =
+      '<section class="screen">' +
+        '<header class="flex items-center justify-between gap-3">' +
+          '<button type="button" data-action="quit" class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Salir</button>' +
+          '<p class="label">Reparto de roles</p>' +
+          soundButton() +
+        '</header>' +
+        '<div class="mt-5">' +
+          '<div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div>' +
+          '<div class="flex items-center justify-between mt-2">' +
+            '<p class="text-[11px] text-slate-500">Jugador ' + (game.revealIndex + 1) + ' de ' + game.players.length + '</p>' +
+            '<p class="text-[11px] text-cyan-300/70">' + Math.round(progress) + '%</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="flex-1 flex flex-col items-center justify-center py-6 text-center">' +
+          '<div class="h-20 w-20 rounded-3xl grid place-items-center font-display text-2xl font-black text-[#061018]" style="background:linear-gradient(135deg,#22d3ee,#a3e635);box-shadow:0 0 40px -10px rgba(34,211,238,.8)">' + initials(player.name) + '</div>' +
+          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-5">Pasa el teléfono a</p>' +
+          '<h2 class="font-display text-[30px] font-bold text-white mt-1 mb-4 text-center break-words max-w-full">' + escapeHtml(player.name) + '</h2>' +
+          '<p class="text-sm text-slate-400 max-w-[280px]">Cuando ' + escapeHtml(player.name) + ' tenga el móvil en sus manos, confirma para ver la palabra en privado.</p>' +
+          '<div class="card mt-6 p-4 w-full max-w-[320px]">' +
+            '<div class="flex items-center gap-3 text-left">' +
+              '<div class="icon-btn" style="pointer-events:none">' + ICONS.lock + '</div>' +
+              '<div>' +
+                '<p class="text-[12px] font-semibold text-slate-200">La palabra sigue oculta</p>' +
+                '<p class="text-[11px] text-slate-500 mt-0.5">No pases el móvil a nadie más hasta terminar.</p>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<button type="button" data-action="confirm-reveal" class="btn-primary mt-7 w-full max-w-[320px]">CONFIRMAR Y VER PALABRA</button>' +
+        '</div>' +
+      '</section>';
+  }
+
   function renderReveal() {
     var game = state.game;
     if (!game) return;
@@ -672,7 +713,7 @@
           '</div>' +
         '</div>' +
         '<div class="flex-1 flex flex-col items-center justify-center py-6">' +
-          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500">Pasa el teléfono a</p>' +
+          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500">Ahora es el turno de</p>' +
           '<h2 class="font-display text-[28px] font-bold text-white mt-1 mb-5 text-center break-words max-w-full">' + escapeHtml(player.name) + '</h2>' +
           '<div class="role-shell">' +
             '<div class="role-card ' + (isImpostor ? 'is-impostor' : 'is-civil') + '" id="role-card">' +
@@ -1459,6 +1500,9 @@
       case 'next-reveal':
         nextReveal();
         break;
+      case 'confirm-reveal':
+        setScreen('reveal');
+        break;
       case 'timer-add':
         addTime(30);
         break;
@@ -1508,7 +1552,7 @@
     }
     if (game.revealIndex < game.players.length - 1) {
       game.revealIndex += 1;
-      render();
+      setScreen('reveal-pass');
     } else {
       beginDebate();
     }
