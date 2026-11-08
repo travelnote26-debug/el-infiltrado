@@ -391,12 +391,12 @@
     appEl.innerHTML =
       '<section class="screen">' +
         '<header class="flex items-start justify-between gap-3 pt-1">' +
-          '<div>' +
+          '<div class="min-w-0 flex-1">' +
             '<p class="label text-cyan-300/70">Pass &amp; Play</p>' +
-            '<h1 class="neon-title font-display text-[42px] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
+            '<h1 class="neon-title font-display text-[clamp(30px,10.5vw,42px)] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
             '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
           '</div>' +
-          '<div class="flex gap-2">' +
+          '<div class="flex flex-none gap-2">' +
             '<button type="button" data-action="show-rules" class="icon-btn" aria-label="Cómo jugar">' + ICONS.help + '</button>' +
             soundButton() +
           '</div>' +
