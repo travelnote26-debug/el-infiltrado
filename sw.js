@@ -1,4 +1,4 @@
-var VERSION = 'v12';
+var VERSION = 'v13';
 var SHELL_CACHE = 'infiltrado-shell-' + VERSION;
 var RUNTIME_CACHE = 'infiltrado-runtime-' + VERSION;
 var BASE = new URL('./', self.location.href).href;

@@ -322,6 +322,7 @@
     }),
     mode: savedSetup.mode === 'blind' ? 'blind' : 'undercover',
     debateTime: TIME_OPTIONS.indexOf(savedSetup.debateTime) >= 0 ? savedSetup.debateTime : 90,
+    timerEnabled: savedSetup.timerEnabled === true,
     impostors: 1,
     categories: new Set()
   };
@@ -352,6 +353,7 @@
   };
 
   var deferredInstallPrompt = null;
+  var pendingAccuseId = null;
 
   function isStandalone() {
     return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -365,6 +367,7 @@
       impostors: setup.impostors,
       mode: setup.mode,
       debateTime: setup.debateTime,
+      timerEnabled: setup.timerEnabled,
       categories: Array.from(setup.categories)
     });
   }
@@ -418,6 +421,8 @@
       game.voteTurn = clamp(parseInt(game.voteTurn, 10) || 0, 0, game.players.length - 1);
       game.round = Math.max(1, parseInt(game.round, 10) || 1);
       game.recorded = !!game.recorded;
+      game.useTimer = game.useTimer !== false;
+      game.accusation = typeof game.accusation === 'string' ? game.accusation : null;
 
       var timer = game.timer;
       timer.base = Math.max(0, Number(timer.base) || 0);
@@ -695,8 +700,14 @@
               '</button>' +
             '</div>' +
             '<div class="h-px bg-white/10 my-3"></div>' +
-            '<p class="label">Tiempo de debate</p>' +
-            '<div class="flex flex-wrap gap-2 mt-2">' + timeChips + '</div>' +
+            '<div class="flex items-center justify-between gap-3">' +
+              '<div><p class="label">Tiempo de debate</p><p class="hint mt-0.5">' + (setup.timerEnabled ? 'Con temporizador' : 'Sin temporizador') + '</p></div>' +
+              '<button type="button" role="switch" aria-checked="' + setup.timerEnabled + '" aria-label="Usar temporizador de debate" data-action="toggle-timer" class="inline-flex items-center gap-2 flex-none">' +
+                '<span class="text-[11px] font-bold ' + (setup.timerEnabled ? 'text-cyan-200' : 'text-slate-500') + '">' + (setup.timerEnabled ? 'Sí' : 'No') + '</span>' +
+                '<span class="switch ' + (setup.timerEnabled ? 'is-on' : '') + '"></span>' +
+              '</button>' +
+            '</div>' +
+            (setup.timerEnabled ? '<div class="flex flex-wrap gap-2 mt-3">' + timeChips + '</div>' : '') +
           '</div>' +
 
           '<div class="card mt-3 p-3 mb-1">' +
@@ -842,6 +853,47 @@
       return '<span class="order-pill"><span class="order-num">' + (index + 1) + '</span>' +
         '<span class="truncate">' + escapeHtml(player.name) + '</span></span>';
     }).join('');
+
+    if (!game.useTimer) {
+      var accusationList = alive.map(function (player) {
+        var selected = game.accusation === player.id;
+        return '<button type="button" class="suspect ' + (selected ? 'is-selected' : '') + '" data-action="accuse-select" data-id="' + player.id + '" aria-pressed="' + selected + '">' +
+          '<span class="avatar">' + initials(player.name) + '</span>' +
+          '<span class="min-w-0 flex-1"><span class="block text-sm font-semibold truncate">' + escapeHtml(player.name) + '</span>' +
+          '<span class="block text-[10px] text-slate-500">' + (selected ? 'Seleccionado para acusar' : 'Seleccionar') + '</span></span>' +
+        '</button>';
+      }).join('');
+
+      appEl.innerHTML =
+        '<section class="screen">' +
+          '<header class="flex items-start justify-between gap-3">' +
+            '<div>' +
+              '<p class="label text-cyan-300/70">Ronda ' + game.round + '</p>' +
+              '<h1 class="font-display text-[28px] font-bold text-white leading-none mt-2">Debate</h1>' +
+            '</div>' +
+            '<div class="flex gap-2">' +
+              '<button type="button" data-action="quit" class="icon-btn" aria-label="Salir de la partida">' + ICONS.close + '</button>' +
+              soundButton() +
+            '</div>' +
+          '</header>' +
+          '<div class="card mt-4 p-3">' +
+            '<div class="flex items-center justify-between">' +
+              '<p class="label">Orden de palabra</p>' +
+              '<p class="text-[10px] uppercase tracking-widest text-slate-500">' + alive.length + ' en juego</p>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-2 mt-2">' + orderPills + '</div>' +
+          '</div>' +
+          '<div class="flex-1 min-h-0 overflow-y-auto scroll-thin mt-4">' +
+            '<div class="flex items-center justify-between">' +
+              '<p class="label">¿A quién acusáis?</p>' +
+              '<p class="hint">Elige uno</p>' +
+            '</div>' +
+            '<div class="grid gap-2 mt-2">' + accusationList + '</div>' +
+          '</div>' +
+          '<button type="button" data-action="accuse-confirm" class="btn-danger mt-3 mb-2" ' + (game.accusation ? '' : 'disabled') + '>ACUSAR</button>' +
+        '</section>';
+      return;
+    }
 
     appEl.innerHTML =
       '<section class="screen">' +
@@ -997,7 +1049,7 @@
             '<div class="h-16 w-16 rounded-2xl grid place-items-center mx-auto font-display text-xl font-bold text-[#061018]" style="background:linear-gradient(135deg,' + (isImpostor ? '#f472b6,#a78bfa' : '#22d3ee,#a3e635') + ');box-shadow:0 0 36px -8px ' + (isImpostor ? 'rgba(244,114,182,.8)' : 'rgba(34,211,238,.8)') + '">' + initials(elim.name) + '</div>' +
             '<h2 class="font-display text-[26px] font-bold text-white mt-4 break-words">' + escapeHtml(elim.name) + '</h2>' +
             '<span class="mini-badge ' + (isImpostor ? 'impostor' : 'civil') + ' mt-2 inline-flex">' + (isImpostor ? 'Infiltrado' : 'Ciudadano') + '</span>' +
-            '<p class="text-[11px] text-slate-500 mt-3">Eliminado con ' + elim.votes + ' ' + (elim.votes === 1 ? 'voto' : 'votos') + '</p>' +
+            '<p class="text-[11px] text-slate-500 mt-3">' + (elim.reason === 'accusation' ? 'Acusado por el grupo' : 'Eliminado con ' + elim.votes + ' ' + (elim.votes === 1 ? 'voto' : 'votos')) + '</p>' +
             '<div class="h-px bg-white/10 my-4"></div>' +
             '<p class="text-[9px] uppercase tracking-[0.28em] text-slate-500">Rol revelado</p>' +
             '<p class="font-display text-[17px] font-bold mt-2 break-words ' + (isImpostor ? 'text-pink-200' : 'text-cyan-200') + '">' + (isImpostor ? 'EL GRUPO ACIERTA' : 'EL GRUPO SE EQUIVOCA') + '</p>' +
@@ -1187,12 +1239,14 @@
       votes: {},
       voteTurn: 0,
       voteChoice: null,
+      accusation: null,
       winner: null,
       lastEliminated: null,
       tie: null,
       startedAt: Date.now(),
       recorded: false,
       debateTime: setup.debateTime,
+      useTimer: !!setup.timerEnabled,
       timer: {
         base: setup.debateTime,
         max: setup.debateTime,
@@ -1210,6 +1264,7 @@
   function beginDebate() {
     var game = state.game;
     game.speakingOrder = shuffle(game.players.filter(function (p) { return p.alive; }).map(function (p) { return p.id; }));
+    game.accusation = null;
     game.timer = {
       base: game.debateTime,
       max: game.debateTime,
@@ -1344,6 +1399,7 @@
     game.votes = {};
     game.voteTurn = 0;
     game.voteChoice = null;
+    game.accusation = null;
     game.tie = null;
     game.lastEliminated = null;
     game.timer = {
@@ -1369,10 +1425,56 @@
     }
   }
 
+  function openAccuseModal(id) {
+    var game = state.game;
+    if (!game) return;
+    var player = game.players.find(function (p) { return p.id === id; });
+    if (!player || !player.alive) return;
+    pendingAccuseId = id;
+    document.body.classList.add('modal-open');
+    modalRoot.innerHTML =
+      '<div class="modal-overlay" data-action="close-modal">' +
+        '<div class="modal-card">' +
+          '<p class="label text-rose-300/70">Confirmar acusación</p>' +
+          '<h2 class="font-display text-xl text-white mt-1">¿Acusar a ' + escapeHtml(player.name) + '?</h2>' +
+          '<p class="text-[12px] leading-relaxed text-slate-400 mt-2">Se revelará su rol y quedará fuera de la partida.</p>' +
+          '<div class="grid grid-cols-2 gap-2 mt-4">' +
+            '<button type="button" data-action="close-modal" class="btn-ghost">Cancelar</button>' +
+            '<button type="button" data-action="confirm-accuse" class="btn-danger">ACUSAR</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function confirmAccusation(id) {
+    var game = state.game;
+    if (!game) return;
+    var player = game.players.find(function (p) { return p.id === id; });
+    if (!player || !player.alive) return;
+    player.alive = false;
+    game.accusation = null;
+    game.lastEliminated = {
+      id: player.id,
+      name: player.name,
+      role: player.role,
+      word: player.word,
+      votes: 0,
+      round: game.round,
+      reason: 'accusation'
+    };
+    game.winner = computeWinner(game);
+    if (game.winner) recordFinishedGame(game);
+    closeModal();
+    setScreen('elimination');
+    Sound.eliminate(player.role === 'impostor');
+    vibrate([40, 40, 80]);
+  }
+
   function quitGame() {
     clearTimeout(state.tallyTimer);
     state.tallyTimer = null;
     stopTimerLoop();
+    pendingAccuseId = null;
     state.game = null;
     state.hold = null;
     setScreen('setup');
@@ -1581,6 +1683,11 @@
         persistSetup();
         render();
         break;
+      case 'toggle-timer':
+        setup.timerEnabled = !setup.timerEnabled;
+        persistSetup();
+        render();
+        break;
       case 'open-custom':
         openCustomModal();
         break;
@@ -1615,6 +1722,14 @@
       case 'select-suspect':
         state.game.voteChoice = state.game.voteChoice === el.dataset.id ? null : el.dataset.id;
         render();
+        break;
+      case 'accuse-select':
+        if (!state.game) break;
+        state.game.accusation = state.game.accusation === el.dataset.id ? null : el.dataset.id;
+        render();
+        break;
+      case 'accuse-confirm':
+        if (state.game && state.game.accusation) openAccuseModal(state.game.accusation);
         break;
       case 'confirm-vote':
         confirmVote();
@@ -1675,7 +1790,8 @@
               '<ol class="mt-2 space-y-1.5 list-decimal list-inside marker:text-slate-500">' +
                 '<li>Pasa el teléfono y mantén pulsado para ver tu rol.</li>' +
                 '<li>Debatid siguiendo el orden aleatorio y dad pistas sin decir la palabra.</li>' +
-                '<li>Votad en secreto al sospechoso. El más votado es eliminado.</li>' +
+                '<li>Con temporizador: votad en secreto y el más votado es eliminado.</li>' +
+                '<li>Sin temporizador: seleccionad a un jugador y acusadlo en grupo; su rol se revela al instante.</li>' +
               '</ol>' +
             '</div>' +
             '<div class="rounded-2xl border border-white/10 bg-white/[0.025] p-4">' +
@@ -1841,6 +1957,7 @@
   function handleModalAction(action, el) {
     if (action === 'close-modal') {
       Sound.click();
+      pendingAccuseId = null;
       closeModal();
       return;
     }
@@ -1856,6 +1973,13 @@
         if (state.screen === 'setup' || state.screen === 'results') render();
         toast('Pareja eliminada');
       }
+      return;
+    }
+    if (action === 'confirm-accuse') {
+      Sound.click();
+      var accuseId = pendingAccuseId;
+      pendingAccuseId = null;
+      if (accuseId) confirmAccusation(accuseId);
       return;
     }
     if (action === 'confirm-delete-history') {
