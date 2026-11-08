@@ -136,12 +136,35 @@
   }
 
   var lastScreen = null;
+  var inViewTransition = false;
+  var transitionPending = false;
+  var transitionTimer = null;
+  var isInitialRender = true;
 
-  function render() {
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  function getNavDirection(from, to) {
+    if (to === 'home') return 'back';
+    if (from === 'results' && to === 'setup') return 'back';
+    if (
+      (from === 'reveal' || from === 'reveal-pass' || from === 'debate' ||
+       from === 'vote-pass' || from === 'vote-select' || from === 'tally' ||
+       from === 'elimination' || from === 'tie') &&
+      (to === 'setup' || to === 'home')
+    ) {
+      return 'back';
+    }
+    return 'forward';
+  }
+
+  function render(enterDirection) {
     if (state.screen !== 'debate') {
       stopTimerLoop();
     }
-    if (lastScreen !== state.screen) {
+    var screenChanged = lastScreen !== state.screen;
+    if (screenChanged) {
       window.scrollTo(0, 0);
       lastScreen = state.screen;
     }
@@ -159,11 +182,69 @@
     else if (state.screen === 'results') renderResults();
     refreshSoundIcons();
     persistSession();
+
+    if (!inViewTransition && (screenChanged || isInitialRender) && !prefersReducedMotion()) {
+      var screenEl = appEl.querySelector('.screen');
+      if (screenEl) {
+        var enterClass = enterDirection === 'back' ? 'screen-entering-back' : 'screen-entering';
+        screenEl.classList.add(enterClass);
+      }
+    }
+    isInitialRender = false;
   }
 
-  function setScreen(name) {
+  function setScreen(name, explicitDir) {
+    if (state.screen === name) return;
+    var prevScreen = state.screen;
+    var direction = explicitDir || getNavDirection(prevScreen, name);
+
+    // 1. Native View Transitions API (Chromium, Android WebView, Safari 18+)
+    if (typeof document.startViewTransition === 'function' && !prefersReducedMotion()) {
+      document.documentElement.dataset.transitionDir = direction;
+      inViewTransition = true;
+      try {
+        var transition = document.startViewTransition(function () {
+          state.screen = name;
+          render(direction);
+        });
+        var cleanup = function () {
+          inViewTransition = false;
+          delete document.documentElement.dataset.transitionDir;
+        };
+        if (transition && transition.finished) {
+          transition.finished.then(cleanup, cleanup);
+        } else {
+          cleanup();
+        }
+        return;
+      } catch (err) {
+        inViewTransition = false;
+        delete document.documentElement.dataset.transitionDir;
+      }
+    }
+
+    // 2. Smooth crossfade fallback (Firefox, older iOS Safari)
+    if (!prefersReducedMotion()) {
+      var currentScreenEl = appEl.querySelector('.screen');
+      if (currentScreenEl && !transitionPending) {
+        transitionPending = true;
+        var leaveClass = direction === 'back' ? 'screen-leaving-back' : 'screen-leaving';
+        currentScreenEl.classList.add(leaveClass);
+        clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(function () {
+          transitionPending = false;
+          state.screen = name;
+          render(direction);
+        }, 130);
+        return;
+      }
+    }
+
+    // 3. Direct render
+    transitionPending = false;
+    clearTimeout(transitionTimer);
     state.screen = name;
-    render();
+    render(direction);
   }
 
   var Sound = {
@@ -485,16 +566,17 @@
     var historyCount = historyEntries.length;
     appEl.innerHTML =
       '<section class="screen">' +
-        '<header class="flex items-start justify-between gap-3 pt-1">' +
-          '<div class="min-w-0 flex-1">' +
-            '<p class="label text-cyan-300/70">Pass &amp; Play</p>' +
-            '<h1 class="neon-title font-display text-[clamp(30px,10.5vw,42px)] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
-            '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
-          '</div>' +
-          '<div class="flex flex-none gap-2">' +
+        '<div class="flex items-center justify-between gap-3 pt-1">' +
+          '<p class="label text-cyan-300/70">Pass &amp; Play</p>' +
+          '<div class="flex items-center gap-2">' +
             '<button type="button" data-action="show-rules" class="icon-btn" aria-label="Cómo jugar">' + ICONS.help + '</button>' +
             soundButton() +
           '</div>' +
+        '</div>' +
+
+        '<header class="mt-3">' +
+          '<h1 class="neon-title font-display text-[clamp(32px,10.5vw,44px)] font-black leading-[0.92]">EL<br>INFILTRADO</h1>' +
+          '<p class="text-sm text-slate-400 mt-2.5 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
         '</header>' +
 
         '<div class="grid grid-cols-3 gap-2 mt-6">' +
@@ -1477,7 +1559,7 @@
     pendingAccuseId = null;
     state.game = null;
     state.hold = null;
-    setScreen('setup');
+    setScreen('setup', 'back');
     toast('Partida abandonada');
   }
 
@@ -1621,7 +1703,7 @@
         openRules();
         break;
       case 'open-history':
-        setScreen('history');
+        setScreen('history', 'forward');
         break;
       case 'go-home':
         clearTimeout(state.tallyTimer);
@@ -1629,7 +1711,7 @@
         stopTimerLoop();
         state.hold = null;
         state.game = null;
-        setScreen('home');
+        setScreen('home', 'back');
         break;
       case 'delete-history':
         openHistoryDeleteModal(el.dataset.id);
@@ -1745,7 +1827,7 @@
         break;
       case 'new-game':
         state.game = null;
-        setScreen('setup');
+        setScreen('setup', state.screen === 'results' ? 'back' : 'forward');
         break;
       default:
         break;

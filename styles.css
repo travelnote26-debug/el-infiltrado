@@ -10,6 +10,7 @@
   --amber: #fbbf24;
   --danger: #fb7185;
   color-scheme: dark;
+  view-transition-name: none;
 }
 
 * {
@@ -97,28 +98,179 @@ button {
   padding-right: calc(var(--gutter) + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
+  view-transition-name: app-screen;
 }
+
+/* ==========================================================================
+   Screen Containers & Transitions
+   ========================================================================== */
 
 .screen {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  animation: screen-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  will-change: transform, opacity;
 }
 
 .screen-fit {
   overflow: hidden;
 }
 
+/* Fallback transitions (browsers without View Transitions API) */
+.screen.screen-entering {
+  animation: screen-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.screen.screen-entering-back {
+  animation: screen-in-back 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.screen.screen-leaving {
+  animation: screen-out 0.14s cubic-bezier(0.4, 0, 0.8, 1) both;
+  pointer-events: none;
+}
+
+.screen.screen-leaving-back {
+  animation: screen-out-back 0.14s cubic-bezier(0.4, 0, 0.8, 1) both;
+  pointer-events: none;
+}
+
 @keyframes screen-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(12px) scale(0.985);
   }
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes screen-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@keyframes screen-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes screen-out-back {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+/* ==========================================================================
+   Native View Transitions API (Modern smooth morphing & crossfade)
+   ========================================================================== */
+
+::view-transition-group(app-screen) {
+  animation-duration: 0.28s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: clip;
+}
+
+::view-transition-image-pair(app-screen) {
+  isolation: isolate;
+}
+
+::view-transition-old(app-screen),
+::view-transition-new(app-screen) {
+  height: 100%;
+  width: 100%;
+  mix-blend-mode: normal;
+  backface-visibility: hidden;
+  transform-origin: 50% 30%;
+}
+
+/* Forward navigation */
+html:not([data-transition-dir="back"])::view-transition-old(app-screen) {
+  animation: vt-screen-out 0.2s cubic-bezier(0.4, 0, 0.7, 1) both;
+}
+
+html:not([data-transition-dir="back"])::view-transition-new(app-screen) {
+  animation: vt-screen-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Back navigation */
+html[data-transition-dir="back"]::view-transition-old(app-screen) {
+  animation: vt-screen-out-back 0.18s cubic-bezier(0.4, 0, 0.7, 1) both;
+}
+
+html[data-transition-dir="back"]::view-transition-new(app-screen) {
+  animation: vt-screen-in-back 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Fallback for engines matching root */
+::view-transition-old(root) {
+  animation: vt-screen-out 0.2s cubic-bezier(0.4, 0, 0.7, 1) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-screen-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes vt-screen-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@keyframes vt-screen-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes vt-screen-out-back {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+@keyframes vt-screen-in-back {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -174,6 +326,11 @@ button {
   border: 1px solid var(--line);
   color: #cbd5e1;
   transition: transform 0.16s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.icon-btn svg {
+  overflow: visible;
+  flex-shrink: 0;
 }
 
 .icon-btn:active {
@@ -1166,5 +1323,10 @@ button {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
