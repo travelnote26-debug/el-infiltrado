@@ -12,8 +12,12 @@
     custom: 'infiltrado.customPairs.v1',
     history: 'infiltrado.history.v1',
     sound: 'infiltrado.sound.v1',
-    setup: 'infiltrado.setup.v1'
+    setup: 'infiltrado.setup.v1',
+    session: 'infiltrado.session.v1'
   };
+
+  var SESSION_TTL = 12 * 60 * 60 * 1000;
+  var GAME_SCREENS = ['reveal-pass', 'reveal', 'debate', 'vote-pass', 'vote-select', 'tally', 'elimination', 'tie', 'results'];
 
   var ICONS = {
     volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M11 5 6 9H2v6h4l5 4V5Z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
@@ -154,6 +158,7 @@
     else if (state.screen === 'tie') renderTie();
     else if (state.screen === 'results') renderResults();
     refreshSoundIcons();
+    persistSession();
   }
 
   function setScreen(name) {
@@ -362,6 +367,91 @@
       debateTime: setup.debateTime,
       categories: Array.from(setup.categories)
     });
+  }
+
+  function clearSession() {
+    try {
+      localStorage.removeItem(STORAGE.session);
+    } catch (err) {}
+  }
+
+  function persistSession() {
+    try {
+      localStorage.setItem(STORAGE.session, JSON.stringify({
+        v: 1,
+        screen: state.screen,
+        game: state.game,
+        savedAt: Date.now()
+      }));
+    } catch (err) {}
+  }
+
+  function isValidGame(game) {
+    return !!(game && Array.isArray(game.players) && game.players.length > 0 &&
+      game.players.every(function (player) {
+        return player && typeof player.name === 'string' &&
+          (player.role === 'impostor' || player.role === 'civil') &&
+          typeof player.alive === 'boolean';
+      }) &&
+      game.timer && typeof game.timer === 'object');
+  }
+
+  function restoreSession() {
+    var saved = load(STORAGE.session, null);
+    if (!saved || typeof saved !== 'object') return;
+    if (!saved.savedAt || Date.now() - saved.savedAt > SESSION_TTL) {
+      clearSession();
+      return;
+    }
+
+    var screen = typeof saved.screen === 'string' ? saved.screen : 'home';
+    var game = saved.game;
+
+    if (GAME_SCREENS.indexOf(screen) >= 0) {
+      if (!isValidGame(game)) {
+        clearSession();
+        return;
+      }
+      game.votes = game.votes && typeof game.votes === 'object' ? game.votes : {};
+      game.speakingOrder = Array.isArray(game.speakingOrder) ? game.speakingOrder : [];
+      game.revealIndex = clamp(parseInt(game.revealIndex, 10) || 0, 0, game.players.length - 1);
+      game.voteTurn = clamp(parseInt(game.voteTurn, 10) || 0, 0, game.players.length - 1);
+      game.round = Math.max(1, parseInt(game.round, 10) || 1);
+      game.recorded = !!game.recorded;
+
+      var timer = game.timer;
+      timer.base = Math.max(0, Number(timer.base) || 0);
+      timer.max = Math.max(timer.base, Number(timer.max) || 0);
+      if (timer.running) {
+        var remaining = (Number(timer.endAt) - Date.now()) / 1000;
+        if (!Number.isFinite(remaining) || remaining <= 0) {
+          timer.remaining = 0;
+          timer.running = false;
+        } else {
+          timer.remaining = remaining;
+        }
+      } else {
+        timer.remaining = clamp(Number(timer.remaining) || 0, 0, timer.max);
+      }
+      timer.lastTick = null;
+
+      state.game = game;
+      state.screen = screen;
+      if (screen === 'tally') {
+        clearTimeout(state.tallyTimer);
+        state.tallyTimer = setTimeout(performTally, 900);
+      }
+      return;
+    }
+
+    if (screen === 'home' || screen === 'history' || screen === 'setup') {
+      state.screen = screen;
+      state.game = null;
+      return;
+    }
+
+    state.screen = 'home';
+    state.game = null;
   }
 
   function refreshSoundIcons() {
@@ -1343,7 +1433,7 @@
       stopTimerLoop();
       return;
     }
-    var remaining = Math.max(0, (timer.endAt - performance.now()) / 1000);
+    var remaining = Math.max(0, (timer.endAt - Date.now()) / 1000);
     timer.remaining = remaining;
     var seconds = Math.ceil(remaining);
     if (seconds !== timer.lastTick && seconds > 0) {
@@ -1355,8 +1445,10 @@
     if (remaining <= 0) {
       timer.remaining = 0;
       timer.running = false;
+      timer.endAt = 0;
       stopTimerLoop();
       updateTimerUI();
+      persistSession();
       Sound.timeUp();
       vibrate([120, 60, 120]);
     }
@@ -1369,19 +1461,22 @@
       timer.max = timer.base;
     }
     timer.running = true;
-    timer.endAt = performance.now() + timer.remaining * 1000;
+    timer.endAt = Date.now() + timer.remaining * 1000;
     timer.lastTick = Math.ceil(timer.remaining);
     startTimerLoop();
     updateTimerUI();
+    persistSession();
   }
 
   function pauseTimer() {
     var timer = state.game.timer;
     if (!timer.running) return;
-    timer.remaining = Math.max(0, (timer.endAt - performance.now()) / 1000);
+    timer.remaining = Math.max(0, (timer.endAt - Date.now()) / 1000);
     timer.running = false;
+    timer.endAt = 0;
     stopTimerLoop();
     updateTimerUI();
+    persistSession();
   }
 
   function toggleTimer() {
@@ -1395,6 +1490,7 @@
     timer.max = Math.max(timer.max, timer.remaining);
     if (timer.running) timer.endAt += seconds * 1000;
     updateTimerUI();
+    persistSession();
   }
 
   function resetTimer() {
@@ -1404,7 +1500,9 @@
     timer.remaining = timer.base;
     timer.max = timer.base;
     timer.lastTick = null;
+    timer.endAt = 0;
     updateTimerUI();
+    persistSession();
   }
 
   function handleAppAction(action, el) {
@@ -1867,8 +1965,12 @@
   document.addEventListener('pointercancel', stopHold);
   window.addEventListener('blur', stopHold);
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) stopHold();
+    if (document.hidden) {
+      stopHold();
+      persistSession();
+    }
   });
+  window.addEventListener('pagehide', persistSession);
 
   modalRoot.addEventListener('click', function (event) {
     var el = event.target.closest('[data-action]');
@@ -1904,5 +2006,6 @@
     });
   }
 
+  restoreSession();
   render();
 })();
