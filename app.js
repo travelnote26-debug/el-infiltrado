@@ -567,69 +567,65 @@
             soundButton() +
           '</div>' +
         '</div>' +
-        '<header class="mt-5">' +
-          '<div>' +
-            '<p class="label text-cyan-300/70">Nueva partida</p>' +
-            '<h1 class="neon-title font-display text-[42px] font-black leading-[0.92] mt-2">EL<br>INFILTRADO</h1>' +
-            '<p class="text-sm text-slate-400 mt-3 max-w-[280px]">Descubre al impostor antes de que te elimine.</p>' +
-          '</div>' +
+        '<header class="mt-3">' +
+          '<p class="label text-cyan-300/70">Nueva partida</p>' +
+          '<h1 class="neon-title font-display text-[clamp(28px,8vw,34px)] font-black leading-none mt-1">EL INFILTRADO</h1>' +
         '</header>' +
 
-        '<div class="card mt-6 p-4">' +
-          '<div class="flex items-end justify-between gap-3">' +
-            '<div><p class="label">Jugadores</p><p class="hint mt-1">De 3 a 12</p></div>' +
-            '<div class="flex items-center gap-3">' +
-              '<button type="button" data-action="player-dec" class="stepper" ' + (setup.count <= 3 ? 'disabled' : '') + ' aria-label="Quitar jugador">&minus;</button>' +
-              '<span class="font-display text-3xl font-bold text-white tabular-nums">' + setup.count + '</span>' +
-              '<button type="button" data-action="player-inc" class="stepper" ' + (setup.count >= 12 ? 'disabled' : '') + ' aria-label="Añadir jugador">+</button>' +
+        '<div class="flex-1 min-h-0 overflow-y-auto scroll-thin mt-4">' +
+
+          '<div class="card p-3">' +
+            '<div class="flex items-center justify-between gap-3">' +
+              '<div><p class="label">Jugadores</p><p class="hint mt-0.5">De 3 a 12</p></div>' +
+              '<div class="flex items-center gap-2">' +
+                '<button type="button" data-action="player-dec" class="stepper" ' + (setup.count <= 3 ? 'disabled' : '') + ' aria-label="Quitar jugador">&minus;</button>' +
+                '<span class="font-display text-2xl font-bold text-white tabular-nums w-7 text-center">' + setup.count + '</span>' +
+                '<button type="button" data-action="player-inc" class="stepper" ' + (setup.count >= 12 ? 'disabled' : '') + ' aria-label="Añadir jugador">+</button>' +
+              '</div>' +
             '</div>' +
+            '<div class="grid gap-1.5 mt-3">' + playerRows + '</div>' +
           '</div>' +
-          '<div class="grid gap-2 mt-4 max-h-[262px] overflow-y-auto scroll-thin pr-1">' + playerRows + '</div>' +
-          (setup.count > 5 ? '<p class="hint text-center mt-2">Desliza para ver todos los jugadores</p>' : '') +
-        '</div>' +
 
-        '<div class="card mt-4 p-4">' +
-          '<div class="flex items-end justify-between gap-3">' +
-            '<div><p class="label">Infiltrados</p><p class="hint mt-1">Máximo ' + maxImp + '</p></div>' +
+          '<div class="card mt-3 p-3">' +
+            '<div class="flex items-center justify-between gap-3">' +
+              '<p class="label">Infiltrados</p>' +
+              '<p class="hint">Máximo ' + maxImp + '</p>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-2 mt-2">' + impostorChips + '</div>' +
+            '<div class="h-px bg-white/10 my-3"></div>' +
+            '<p class="label">Modo de juego</p>' +
+            '<div class="grid grid-cols-2 gap-2 mt-2">' +
+              '<button type="button" class="mode-card ' + (setup.mode === 'undercover' ? 'is-active' : '') + '" data-action="mode" data-mode="undercover" aria-pressed="' + (setup.mode === 'undercover') + '">' +
+                '<span class="font-display text-[12px] font-bold tracking-wide text-white">UNDERCOVER</span>' +
+                '<span class="text-[10px] leading-snug text-slate-400 mt-1">Palabra parecida para infiltrados.</span>' +
+              '</button>' +
+              '<button type="button" class="mode-card ' + (setup.mode === 'blind' ? 'is-active' : '') + '" data-action="mode" data-mode="blind" aria-pressed="' + (setup.mode === 'blind') + '">' +
+                '<span class="font-display text-[12px] font-bold tracking-wide text-white">CIEGO</span>' +
+                '<span class="text-[10px] leading-snug text-slate-400 mt-1">Sin palabra para infiltrados.</span>' +
+              '</button>' +
+            '</div>' +
+            '<div class="h-px bg-white/10 my-3"></div>' +
+            '<p class="label">Tiempo de debate</p>' +
+            '<div class="flex flex-wrap gap-2 mt-2">' + timeChips + '</div>' +
           '</div>' +
-          '<div class="flex flex-wrap gap-2 mt-3">' + impostorChips + '</div>' +
-        '</div>' +
 
-        '<div class="card mt-4 p-4">' +
-          '<p class="label">Modo de juego</p>' +
-          '<div class="grid grid-cols-2 gap-2 mt-3">' +
-            '<button type="button" class="mode-card ' + (setup.mode === 'undercover' ? 'is-active' : '') + '" data-action="mode" data-mode="undercover" aria-pressed="' + (setup.mode === 'undercover') + '">' +
-              '<span class="font-display text-[13px] font-bold tracking-wide text-white">UNDERCOVER</span>' +
-              '<span class="text-[11px] leading-snug text-slate-400 mt-1">Los infiltrados reciben una palabra parecida.</span>' +
+          '<div class="card mt-3 p-3 mb-1">' +
+            '<div class="flex items-center justify-between">' +
+              '<p class="label">Categorías</p>' +
+              '<button type="button" data-action="all-categories" class="text-[11px] font-semibold text-cyan-300/80">' +
+                (allSelected ? 'Quitar todas' : 'Todas') +
+              '</button>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-2 mt-2">' + categoryChips + '</div>' +
+            '<button type="button" data-action="open-custom" class="mt-3 w-full rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-2.5 text-[12px] font-semibold text-slate-300 active:scale-[0.99]">' +
+              '+ Añadir palabras personalizadas' +
             '</button>' +
-            '<button type="button" class="mode-card ' + (setup.mode === 'blind' ? 'is-active' : '') + '" data-action="mode" data-mode="blind" aria-pressed="' + (setup.mode === 'blind') + '">' +
-              '<span class="font-display text-[13px] font-bold tracking-wide text-white">CIEGO</span>' +
-              '<span class="text-[11px] leading-snug text-slate-400 mt-1">Los infiltrados no reciben ninguna palabra.</span>' +
-            '</button>' +
           '</div>' +
+
         '</div>' +
 
-        '<div class="card mt-4 p-4">' +
-          '<div class="flex items-center justify-between">' +
-            '<p class="label">Categorías</p>' +
-            '<button type="button" data-action="all-categories" class="text-[11px] font-semibold text-cyan-300/80">' +
-              (allSelected ? 'Quitar todas' : 'Todas') +
-            '</button>' +
-          '</div>' +
-          '<div class="flex flex-wrap gap-2 mt-3">' + categoryChips + '</div>' +
-          '<button type="button" data-action="open-custom" class="mt-3 w-full rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3 text-[12px] font-semibold text-slate-300 active:scale-[0.99]">' +
-            '+ Añadir palabras personalizadas' +
-          '</button>' +
-        '</div>' +
-
-        '<div class="card mt-4 p-4">' +
-          '<p class="label">Tiempo de debate</p>' +
-          '<div class="flex flex-wrap gap-2 mt-3">' + timeChips + '</div>' +
-        '</div>' +
-
-        '<div class="mt-6 mb-4">' +
+        '<div class="pt-3 mt-2 border-t border-white/10">' +
           '<button type="button" data-action="start-game" class="btn-primary">COMENZAR PARTIDA</button>' +
-          '<p class="text-center text-[11px] text-slate-500 mt-3">Un solo dispositivo · Pasa el teléfono</p>' +
         '</div>' +
       '</section>';
   }
@@ -642,25 +638,25 @@
     var progress = (game.revealIndex / game.players.length) * 100;
 
     appEl.innerHTML =
-      '<section class="screen">' +
+      '<section class="screen screen-fit">' +
         '<header class="flex items-center justify-between gap-3">' +
           '<button type="button" data-action="quit" class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Salir</button>' +
           '<p class="label">Reparto de roles</p>' +
           soundButton() +
         '</header>' +
-        '<div class="mt-5">' +
+        '<div class="mt-4">' +
           '<div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div>' +
           '<div class="flex items-center justify-between mt-2">' +
             '<p class="text-[11px] text-slate-500">Jugador ' + (game.revealIndex + 1) + ' de ' + game.players.length + '</p>' +
             '<p class="text-[11px] text-cyan-300/70">' + Math.round(progress) + '%</p>' +
           '</div>' +
         '</div>' +
-        '<div class="flex-1 flex flex-col items-center justify-center py-6 text-center">' +
+        '<div class="flex-1 min-h-0 flex flex-col items-center justify-center py-2 text-center">' +
           '<div class="h-20 w-20 rounded-3xl grid place-items-center font-display text-2xl font-black text-[#061018]" style="background:linear-gradient(135deg,#22d3ee,#a3e635);box-shadow:0 0 40px -10px rgba(34,211,238,.8)">' + initials(player.name) + '</div>' +
-          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-5">Pasa el teléfono a</p>' +
-          '<h2 class="font-display text-[30px] font-bold text-white mt-1 mb-4 text-center break-words max-w-full">' + escapeHtml(player.name) + '</h2>' +
-          '<p class="text-sm text-slate-400 max-w-[280px]">Cuando ' + escapeHtml(player.name) + ' tenga el móvil en sus manos, confirma para ver la palabra en privado.</p>' +
-          '<div class="card mt-6 p-4 w-full">' +
+          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-4">Pasa el teléfono a</p>' +
+          '<h2 class="font-display text-[clamp(36px,11vw,54px)] font-bold text-white mt-1 mb-2 text-center break-words max-w-full leading-[1.05]">' + escapeHtml(player.name) + '</h2>' +
+          '<p class="text-[13px] text-slate-400 max-w-[280px]">Cuando ' + escapeHtml(player.name) + ' tenga el móvil en sus manos, confirma para ver la palabra en privado.</p>' +
+          '<div class="card mt-4 p-3 w-full">' +
             '<div class="flex items-center gap-3 text-left">' +
               '<div class="icon-btn" style="pointer-events:none">' + ICONS.lock + '</div>' +
               '<div>' +
@@ -669,8 +665,8 @@
               '</div>' +
             '</div>' +
           '</div>' +
-          '<button type="button" data-action="confirm-reveal" class="btn-primary mt-7 w-full">CONFIRMAR Y VER PALABRA</button>' +
         '</div>' +
+        '<button type="button" data-action="confirm-reveal" class="btn-primary w-full mb-2">CONFIRMAR Y VER PALABRA</button>' +
       '</section>';
   }
 
@@ -699,22 +695,22 @@
       : '<p class="text-[11px] text-slate-500 text-center mt-5">Mantén pulsado para desbloquear</p>';
 
     appEl.innerHTML =
-      '<section class="screen">' +
+      '<section class="screen screen-fit">' +
         '<header class="flex items-center justify-between gap-3">' +
           '<button type="button" data-action="quit" class="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Salir</button>' +
           '<p class="label">Reparto de roles</p>' +
           soundButton() +
         '</header>' +
-        '<div class="mt-5">' +
+        '<div class="mt-4">' +
           '<div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div>' +
           '<div class="flex items-center justify-between mt-2">' +
             '<p class="text-[11px] text-slate-500">Jugador ' + (game.revealIndex + 1) + ' de ' + game.players.length + '</p>' +
             '<p class="text-[11px] text-cyan-300/70">' + Math.round(progress) + '%</p>' +
           '</div>' +
         '</div>' +
-        '<div class="flex-1 flex flex-col items-center justify-center py-6">' +
+        '<div class="flex-1 min-h-0 flex flex-col items-center justify-center py-1">' +
           '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500">Ahora es el turno de</p>' +
-          '<h2 class="font-display text-[28px] font-bold text-white mt-1 mb-5 text-center break-words max-w-full">' + escapeHtml(player.name) + '</h2>' +
+          '<h2 class="font-display text-[clamp(34px,10.5vw,50px)] font-bold text-white mt-1 mb-3 text-center break-words max-w-full leading-[1.05]">' + escapeHtml(player.name) + '</h2>' +
           '<div class="role-shell">' +
             '<div class="role-card ' + (isImpostor ? 'is-impostor' : 'is-civil') + '" id="role-card">' +
               '<div class="role-hint">' +
@@ -735,10 +731,10 @@
               '</div>' +
             '</div>' +
           '</div>' +
-          '<button type="button" class="hold-btn mt-6" data-hold="1" aria-label="Mantén pulsado para ver tu palabra">' +
+          '<button type="button" class="hold-btn mt-4" data-hold="1" aria-label="Mantén pulsado para ver tu palabra">' +
             '<span class="hold-inner">' + ICONS.eye + '<span id="hold-label">MANTÉN PULSADO</span></span>' +
           '</button>' +
-          '<p class="text-[11px] text-slate-500 text-center mt-4 max-w-[240px]">Al soltar, la palabra se oculta al instante.</p>' +
+          '<p class="text-[11px] text-slate-500 text-center mt-3 max-w-[240px]">Al soltar, la palabra se oculta al instante.</p>' +
         '</div>' +
         nextBlock +
       '</section>';

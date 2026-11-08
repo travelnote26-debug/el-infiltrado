@@ -103,6 +103,10 @@ button {
   animation: screen-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+.screen-fit {
+  overflow: hidden;
+}
+
 @keyframes screen-in {
   from {
     opacity: 0;
@@ -396,8 +400,8 @@ button {
 
 .role-card {
   position: relative;
-  min-height: 236px;
-  padding: 26px 22px;
+  min-height: clamp(170px, 28dvh, 236px);
+  padding: 20px 18px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -521,8 +525,8 @@ button {
 
 .hold-btn {
   position: relative;
-  width: 168px;
-  height: 168px;
+  width: clamp(132px, 38vw, 168px);
+  height: clamp(132px, 38vw, 168px);
   border-radius: 50%;
   border: 1px solid rgba(34, 211, 238, 0.42);
   background:
