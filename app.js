@@ -660,7 +660,7 @@
           '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500 mt-5">Pasa el teléfono a</p>' +
           '<h2 class="font-display text-[30px] font-bold text-white mt-1 mb-4 text-center break-words max-w-full">' + escapeHtml(player.name) + '</h2>' +
           '<p class="text-sm text-slate-400 max-w-[280px]">Cuando ' + escapeHtml(player.name) + ' tenga el móvil en sus manos, confirma para ver la palabra en privado.</p>' +
-          '<div class="card mt-6 p-4 w-full max-w-[320px]">' +
+          '<div class="card mt-6 p-4 w-full">' +
             '<div class="flex items-center gap-3 text-left">' +
               '<div class="icon-btn" style="pointer-events:none">' + ICONS.lock + '</div>' +
               '<div>' +
@@ -669,7 +669,7 @@
               '</div>' +
             '</div>' +
           '</div>' +
-          '<button type="button" data-action="confirm-reveal" class="btn-primary mt-7 w-full max-w-[320px]">CONFIRMAR Y VER PALABRA</button>' +
+          '<button type="button" data-action="confirm-reveal" class="btn-primary mt-7 w-full">CONFIRMAR Y VER PALABRA</button>' +
         '</div>' +
       '</section>';
   }
@@ -827,11 +827,11 @@
           '<div class="mt-6 h-16 w-16 rounded-2xl grid place-items-center font-display text-xl font-bold text-[#061018]" style="background:linear-gradient(135deg,#f472b6,#a78bfa);box-shadow:0 0 36px -8px rgba(244,114,182,.8)">' + initials(voter.name) + '</div>' +
           '<h2 class="font-display text-[28px] font-bold text-white mt-4 break-words max-w-full">' + escapeHtml(voter.name) + '</h2>' +
           '<p class="text-sm text-slate-400 mt-2 max-w-[280px]">Pasa el teléfono. Nadie más debería ver esta pantalla.</p>' +
-          '<div class="card mt-7 p-4 w-full max-w-[300px]">' +
+          '<div class="card mt-7 p-4 w-full">' +
             '<p class="text-[10px] uppercase tracking-[0.25em] text-slate-500">Voto privado</p>' +
             '<p class="text-[13px] text-slate-300 mt-2">Selecciona a quien crees que es el infiltrado.</p>' +
           '</div>' +
-          '<button type="button" data-action="vote-ready" class="btn-primary mt-7 max-w-[300px]">VOTAR EN PRIVADO</button>' +
+          '<button type="button" data-action="vote-ready" class="btn-primary mt-7 w-full">VOTAR EN PRIVADO</button>' +
         '</div>' +
       '</section>';
   }
@@ -907,7 +907,7 @@
         '<div class="flex-1 flex flex-col items-center justify-center py-5 text-center">' +
           '<p class="text-[10px] uppercase tracking-[0.32em] text-slate-500">Veredicto del grupo</p>' +
           '<h1 class="font-display text-[42px] font-black text-rose-300 danger-text mt-2 leading-none">ELIMINADO</h1>' +
-          '<div class="card elimination-card mt-6 p-6 w-full max-w-[330px]" style="border-color:' + (isImpostor ? 'rgba(244,114,182,.55)' : 'rgba(34,211,238,.45)') + '">' +
+          '<div class="card elimination-card mt-6 p-6 w-full" style="border-color:' + (isImpostor ? 'rgba(244,114,182,.55)' : 'rgba(34,211,238,.45)') + '">' +
             '<div class="h-16 w-16 rounded-2xl grid place-items-center mx-auto font-display text-xl font-bold text-[#061018]" style="background:linear-gradient(135deg,' + (isImpostor ? '#f472b6,#a78bfa' : '#22d3ee,#a3e635') + ');box-shadow:0 0 36px -8px ' + (isImpostor ? 'rgba(244,114,182,.8)' : 'rgba(34,211,238,.8)') + '">' + initials(elim.name) + '</div>' +
             '<h2 class="font-display text-[26px] font-bold text-white mt-4 break-words">' + escapeHtml(elim.name) + '</h2>' +
             '<span class="mini-badge ' + (isImpostor ? 'impostor' : 'civil') + ' mt-2 inline-flex">' + (isImpostor ? 'Infiltrado' : 'Ciudadano') + '</span>' +
@@ -939,7 +939,7 @@
           '<p class="text-[10px] uppercase tracking-[0.32em] text-slate-500">Votos empatados</p>' +
           '<h1 class="font-display text-[46px] font-black text-amber-300 mt-2 leading-none" style="text-shadow:0 0 34px rgba(251,191,36,.55)">EMPATE</h1>' +
           '<p class="text-sm text-slate-400 mt-4 max-w-[270px]">Nadie será eliminado en esta ronda. El debate continúa.</p>' +
-          '<div class="card mt-6 p-4 w-full max-w-[330px]">' +
+          '<div class="card mt-6 p-4 w-full">' +
             '<p class="label">Sospechosos igualados</p>' +
             '<p class="text-[12px] text-slate-400 mt-2">' + tie.votes + ' votos cada uno</p>' +
             '<div class="flex flex-wrap justify-center gap-2 mt-3">' + names + '</div>' +

@@ -1,5 +1,6 @@
 :root {
   --bg: #04050c;
+  --gutter: clamp(16px, 4.5vw, 26px);
   --panel: rgba(15, 18, 34, 0.72);
   --line: rgba(255, 255, 255, 0.08);
   --cyan: #22d3ee;
@@ -86,7 +87,10 @@ button {
   max-width: 480px;
   margin: 0 auto;
   min-height: 100dvh;
-  padding: calc(18px + env(safe-area-inset-top)) 16px calc(22px + env(safe-area-inset-bottom));
+  padding-top: calc(18px + env(safe-area-inset-top));
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
+  padding-left: calc(var(--gutter) + env(safe-area-inset-left));
+  padding-right: calc(var(--gutter) + env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
 }
@@ -387,7 +391,7 @@ button {
 
 .role-shell {
   width: 100%;
-  max-width: 340px;
+  max-width: 100%;
 }
 
 .role-card {
@@ -951,8 +955,10 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  padding-left: calc(var(--gutter) + env(safe-area-inset-left));
+  padding-right: calc(var(--gutter) + env(safe-area-inset-right));
+  padding-top: var(--gutter);
+  padding-bottom: calc(var(--gutter) + env(safe-area-inset-bottom));
   background: rgba(2, 3, 8, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -1074,7 +1080,7 @@ button {
   bottom: calc(24px + env(safe-area-inset-bottom));
   z-index: 80;
   transform: translate(-50%, 20px);
-  max-width: calc(100vw - 40px);
+  max-width: calc(100vw - 2 * (var(--gutter) + env(safe-area-inset-left)));
   padding: 11px 18px;
   border-radius: 999px;
   border: 1px solid rgba(34, 211, 238, 0.3);
