@@ -928,6 +928,69 @@ html[data-transition-dir="back"]::view-transition-new(app-screen) {
   box-shadow: 0 0 28px -9px rgba(244, 114, 182, 0.85);
 }
 
+.suspect.is-eliminated {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.suspect.is-eliminated .avatar {
+  filter: grayscale(1);
+  box-shadow: none;
+}
+
+.cat-dropdown > summary {
+  list-style: none;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cat-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cat-chevron {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+  color: #94a3b8;
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.cat-dropdown > summary:active .cat-chevron {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.cat-dropdown[open] .cat-chevron {
+  transform: rotate(180deg);
+  color: #a5f3fc;
+}
+
+.cat-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  background: rgba(34, 211, 238, 0.08);
+  color: #a5f3fc;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.cat-dropdown .cat-body {
+  padding-top: 12px;
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .suspect .avatar {
   background: linear-gradient(135deg, #f472b6, #a78bfa);
   box-shadow: 0 0 16px -6px rgba(244, 114, 182, 0.8);

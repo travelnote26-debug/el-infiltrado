@@ -34,7 +34,8 @@
     arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
-    history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3.2 4.2v5.4h5.4"/><path d="M12 7.5V12l3 2"/></svg>'
+    history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3.2 4.2v5.4h5.4"/><path d="M12 7.5V12l3 2"/></svg>',
+    chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m6 9 6 6 6-6"/></svg>'
   };
 
   function load(key, fallback) {
@@ -435,6 +436,7 @@
 
   var deferredInstallPrompt = null;
   var pendingAccuseId = null;
+  var setupCatsOpen = false;
 
   function isStandalone() {
     return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
@@ -792,18 +794,25 @@
             (setup.timerEnabled ? '<div class="flex flex-wrap gap-2 mt-3">' + timeChips + '</div>' : '') +
           '</div>' +
 
-          '<div class="card mt-3 p-3 mb-1">' +
-            '<div class="flex items-center justify-between">' +
-              '<p class="label">Categorías</p>' +
-              '<button type="button" data-action="all-categories" class="text-[11px] font-semibold text-cyan-300/80">' +
+          '<details class="card mt-3 p-3 mb-1 cat-dropdown" id="cat-dropdown"' + (setupCatsOpen ? ' open' : '') + '>' +
+            '<summary class="flex items-center justify-between gap-3">' +
+              '<span class="flex items-center gap-2 min-w-0">' +
+                '<p class="label">Categorías</p>' +
+                '<span class="cat-count">' + setup.categories.size + '/' + cats.length + '</span>' +
+              '</span>' +
+              '<span class="cat-chevron">' + ICONS.chevron + '</span>' +
+            '</summary>' +
+            '<div class="cat-body">' +
+              '<p class="hint">Elige de dónde saldrán las parejas de palabras</p>' +
+              '<button type="button" data-action="all-categories" class="mt-2 text-[11px] font-semibold text-cyan-300/80">' +
                 (allSelected ? 'Quitar todas' : 'Todas') +
               '</button>' +
+              '<div class="flex flex-wrap gap-2 mt-2">' + categoryChips + '</div>' +
+              '<button type="button" data-action="open-custom" class="mt-3 w-full rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-2.5 text-[12px] font-semibold text-slate-300 active:scale-[0.99]">' +
+                '+ Añadir palabras personalizadas' +
+              '</button>' +
             '</div>' +
-            '<div class="flex flex-wrap gap-2 mt-2">' + categoryChips + '</div>' +
-            '<button type="button" data-action="open-custom" class="mt-3 w-full rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-2.5 text-[12px] font-semibold text-slate-300 active:scale-[0.99]">' +
-              '+ Añadir palabras personalizadas' +
-            '</button>' +
-          '</div>' +
+          '</details>' +
 
         '</div>' +
 
@@ -875,7 +884,7 @@
       ? '<button type="button" data-action="next-reveal" class="btn-primary mt-5">' +
           (game.revealIndex === game.players.length - 1 ? 'EMPEZAR DEBATE' : 'SIGUIENTE JUGADOR') +
         '</button>'
-      : '<p class="text-[11px] text-slate-500 text-center mt-5">Mantén pulsado para desbloquear</p>';
+      : '<div class="mt-5 invisible" aria-hidden="true"><button type="button" class="btn-primary" tabindex="-1" style="pointer-events:none">SIGUIENTE JUGADOR</button></div>';
 
     appEl.innerHTML =
       '<section class="screen screen-fit">' +
@@ -892,14 +901,13 @@
           '</div>' +
         '</div>' +
         '<div class="flex-1 min-h-0 flex flex-col items-center justify-center py-1">' +
-          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500">Ahora es el turno de</p>' +
+          '<p class="text-[10px] uppercase tracking-[0.3em] text-slate-500">TURNO DE</p>' +
           '<h2 class="font-display text-[clamp(34px,10.5vw,50px)] font-bold text-white mt-1 mb-3 text-center break-words max-w-full leading-[1.05]">' + escapeHtml(player.name) + '</h2>' +
           '<div class="role-shell">' +
             '<div class="role-card ' + (isImpostor ? 'is-impostor' : 'is-civil') + '" id="role-card">' +
               '<div class="role-hint">' +
                 '<div class="icon-btn" style="pointer-events:none">' + ICONS.lock + '</div>' +
                 '<p class="text-sm font-semibold text-slate-200">Palabra oculta</p>' +
-                '<p class="text-[11px] text-slate-500 max-w-[210px]">Mantén pulsado el botón para verla en privado.</p>' +
               '</div>' +
               '<div class="secret" id="role-secret" hidden>' +
                 badge +
@@ -917,7 +925,6 @@
           '<button type="button" class="hold-btn mt-4" data-hold="1" aria-label="Mantén pulsado para ver tu palabra">' +
             '<span class="hold-inner">' + ICONS.eye + '<span id="hold-label">MANTÉN PULSADO</span></span>' +
           '</button>' +
-          '<p class="text-[11px] text-slate-500 text-center mt-3 max-w-[240px]">Al soltar, la palabra se oculta al instante.</p>' +
         '</div>' +
         nextBlock +
       '</section>';
@@ -927,17 +934,17 @@
     var game = state.game;
     if (!game) return;
     var alive = game.players.filter(function (p) { return p.alive; });
-    var order = game.speakingOrder.map(function (id) {
-      return game.players.find(function (p) { return p.id === id; });
-    }).filter(Boolean);
-
-    var orderPills = order.map(function (player, index) {
-      return '<span class="order-pill"><span class="order-num">' + (index + 1) + '</span>' +
-        '<span class="truncate">' + escapeHtml(player.name) + '</span></span>';
-    }).join('');
 
     if (!game.useTimer) {
-      var accusationList = alive.map(function (player) {
+      var allPlayers = game.players;
+      var accusationList = allPlayers.map(function (player) {
+        if (!player.alive) {
+          return '<div class="suspect is-eliminated" aria-disabled="true">' +
+            '<span class="avatar">' + initials(player.name) + '</span>' +
+            '<span class="min-w-0 flex-1"><span class="block text-sm font-semibold truncate">' + escapeHtml(player.name) + '</span>' +
+            '<span class="block text-[10px] text-slate-500">Eliminado</span></span>' +
+          '</div>';
+        }
         var selected = game.accusation === player.id;
         return '<button type="button" class="suspect ' + (selected ? 'is-selected' : '') + '" data-action="accuse-select" data-id="' + player.id + '" aria-pressed="' + selected + '">' +
           '<span class="avatar">' + initials(player.name) + '</span>' +
@@ -958,13 +965,6 @@
               soundButton() +
             '</div>' +
           '</header>' +
-          '<div class="card mt-4 p-3">' +
-            '<div class="flex items-center justify-between">' +
-              '<p class="label">Orden de palabra</p>' +
-              '<p class="text-[10px] uppercase tracking-widest text-slate-500">' + alive.length + ' en juego</p>' +
-            '</div>' +
-            '<div class="flex flex-wrap gap-2 mt-2">' + orderPills + '</div>' +
-          '</div>' +
           '<div class="flex-1 min-h-0 overflow-y-auto scroll-thin mt-4">' +
             '<div class="flex items-center justify-between">' +
               '<p class="label">¿A quién acusáis?</p>' +
@@ -989,13 +989,6 @@
             soundButton() +
           '</div>' +
         '</header>' +
-        '<div class="card mt-5 p-4">' +
-          '<div class="flex items-center justify-between">' +
-            '<p class="label">Orden de palabra</p>' +
-            '<p class="text-[10px] uppercase tracking-widest text-slate-500">' + alive.length + ' en juego</p>' +
-          '</div>' +
-          '<div class="flex flex-wrap gap-2 mt-3">' + orderPills + '</div>' +
-        '</div>' +
         '<div class="flex-1 flex flex-col items-center justify-center py-5">' +
           '<div class="timer-wrap" id="timer-wrap">' +
             '<svg class="timer-svg" viewBox="0 0 240 240" aria-hidden="true">' +
@@ -2134,6 +2127,12 @@
     if (!el) return;
     handleAppAction(el.dataset.action, el);
   });
+
+  appEl.addEventListener('toggle', function (event) {
+    if (event.target && event.target.id === 'cat-dropdown') {
+      setupCatsOpen = event.target.open;
+    }
+  }, true);
 
   appEl.addEventListener('input', function (event) {
     var input = event.target.closest('[data-player-index]');
