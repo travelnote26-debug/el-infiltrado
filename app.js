@@ -31,7 +31,6 @@
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8.5 10.5V7.8a3.5 3.5 0 0 1 7 0v2.7"/><path d="M12 14.5v2.2"/></svg>',
     install: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 3v11"/><path d="m7 10 5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>',
     eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-7 h-7"><path d="M2.5 12s3.6-6.2 9.5-6.2S21.5 12 21.5 12s-3.6 6.2-9.5 6.2S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>',
-    arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 12H5"/><path d="m11 18-6-6 6-6"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
     history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3.2 12a8.8 8.8 0 1 0 2.6-6.2"/><path d="M3.2 4.2v5.4h5.4"/><path d="M12 7.5V12l3 2"/></svg>',
@@ -134,6 +133,17 @@
     if (count <= 5) return 1;
     if (count <= 8) return 2;
     return 3;
+  }
+
+  function makeTimer(seconds) {
+    return {
+      base: seconds,
+      max: seconds,
+      remaining: seconds,
+      running: false,
+      endAt: 0,
+      lastTick: null
+    };
   }
 
   var lastScreen = null;
@@ -499,7 +509,6 @@
         return;
       }
       game.votes = game.votes && typeof game.votes === 'object' ? game.votes : {};
-      game.speakingOrder = Array.isArray(game.speakingOrder) ? game.speakingOrder : [];
       game.revealIndex = clamp(parseInt(game.revealIndex, 10) || 0, 0, game.players.length - 1);
       game.voteTurn = clamp(parseInt(game.voteTurn, 10) || 0, 0, game.players.length - 1);
       game.round = Math.max(1, parseInt(game.round, 10) || 1);
@@ -933,7 +942,6 @@
   function renderDebate() {
     var game = state.game;
     if (!game) return;
-    var alive = game.players.filter(function (p) { return p.alive; });
 
     if (!game.useTimer) {
       var allPlayers = game.players;
@@ -1310,7 +1318,6 @@
       mode: setup.mode,
       round: 1,
       revealIndex: 0,
-      speakingOrder: [],
       votes: {},
       voteTurn: 0,
       voteChoice: null,
@@ -1322,14 +1329,7 @@
       recorded: false,
       debateTime: setup.debateTime,
       useTimer: !!setup.timerEnabled,
-      timer: {
-        base: setup.debateTime,
-        max: setup.debateTime,
-        remaining: setup.debateTime,
-        running: false,
-        endAt: 0,
-        lastTick: null
-      }
+      timer: makeTimer(setup.debateTime)
     };
 
     setScreen('reveal');
@@ -1338,16 +1338,8 @@
 
   function beginDebate() {
     var game = state.game;
-    game.speakingOrder = shuffle(game.players.filter(function (p) { return p.alive; }).map(function (p) { return p.id; }));
     game.accusation = null;
-    game.timer = {
-      base: game.debateTime,
-      max: game.debateTime,
-      remaining: game.debateTime,
-      running: false,
-      endAt: 0,
-      lastTick: null
-    };
+    game.timer = makeTimer(game.debateTime);
     setScreen('debate');
   }
 
@@ -1477,15 +1469,7 @@
     game.accusation = null;
     game.tie = null;
     game.lastEliminated = null;
-    game.timer = {
-      base: game.debateTime,
-      max: game.debateTime,
-      remaining: game.debateTime,
-      running: false,
-      endAt: 0,
-      lastTick: null
-    };
-    game.speakingOrder = shuffle(game.players.filter(function (p) { return p.alive; }).map(function (p) { return p.id; }));
+    game.timer = makeTimer(game.debateTime);
     setScreen('debate');
   }
 
@@ -1748,8 +1732,9 @@
         render();
         break;
       case 'all-categories':
-        if (setup.categories.size === allCategories().length) setup.categories.clear();
-        else allCategories().forEach(function (key) { setup.categories.add(key); });
+        var categories = allCategories();
+        if (setup.categories.size === categories.length) setup.categories.clear();
+        else categories.forEach(function (key) { setup.categories.add(key); });
         persistSetup();
         render();
         break;
